@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MIN_LENGTH, MinLength } from "class-validator"
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength, MIN_LENGTH, MinLength } from "class-validator"
+import { Profile } from "src/profile/entities/profile.entity"
 
 export class CreateUserDto {
    @IsString()
@@ -16,4 +17,7 @@ export class CreateUserDto {
    @MinLength(8)
    @MaxLength(100)
    password: string
+
+   @IsOptional()
+   profile: Profile
 }

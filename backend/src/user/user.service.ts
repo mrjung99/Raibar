@@ -1,26 +1,64 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { HashingProvider } from 'src/auth/provider/hashing.provider';
+
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
+   constructor(
+      @InjectRepository(User)
+      private readonly userRepository: Repository<User>,
 
-  findAll() {
-    return `This action returns all user`;
-  }
+      private readonly hashingProvider: HashingProvider
+   ) { }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+   //* ------------------ CREATE USER -------------------------
+   async createUser(createUserDto: CreateUserDto) {
+      createUserDto.profile = createUserDto.profile ?? {}
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
-  }
+      try {
+         const user = this.userRepository.create({
+            ...createUserDto,
+            password: await this.hashingProvider.hashPassword(createUserDto.password)
+         })
+
+         return await this.userRepository.save(user)
+
+      } catch (error) {
+         if (error.code === '23505') {
+            if (error.detail.includes('username')) {
+               throw new BadRequestException({
+                  status: 'fail',
+                  field: 'username',
+                  message: "username already taken!!"
+               })
+            }
+
+            if (error.detail.includes('email')) {
+               throw new BadRequestException({
+                  status: 'fail',
+                  field: "email",
+                  message: "User with this email already exist, try another one!!"
+               })
+            }
+
+         }
+      }
+   }
+
+   //* ------------------ FIND USER BY EMAIL -------------------------
+   async findUserByEmail(email: string): Promise<User> {
+      const user = await this.userRepository.findOne({ where: { email } })
+
+      if (!user) {
+         throw new NotFoundException(`User with the email: ${email} is not found.`)
+      }
+
+      return user
+   }
+
 }

@@ -10,6 +10,8 @@ import dbConfig from './config/dbConfig';
 import appEnvConfig from './config/appEnv.config';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import authConfig from './auth/config/authConfig';
+import { JwtModule } from '@nestjs/jwt';
 
 const env = process.env.NODE_ENV;
 console.log(env);
@@ -34,7 +36,14 @@ console.log(env);
             host: appConfig.get('database.host'),
             port: appConfig.get('database.port')
          })
-      }), TweetModule, UserModule, ProfileModule, AuthModule],
+      }),
+      TweetModule,
+      UserModule,
+      ProfileModule,
+      AuthModule,
+      ConfigModule.forFeature(authConfig),
+      JwtModule.registerAsync(authConfig.asProvider())
+   ],
    controllers: [AppController],
    providers: [AppService],
 })
