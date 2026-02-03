@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTweetDto } from './dto/create-tweet.dto';
 import { UpdateTweetDto } from './dto/update-tweet.dto';
 import { Repository } from 'typeorm';
@@ -20,6 +20,24 @@ export class TweetService {
    }
 
 
+   //* -----------------------  GET TWEET BY ID ------------------
+   async getTweetById(tweetId: number, userId: number) {
+      const tweet = await this.tweetRepo.findOne({
+         where: {
+            id: tweetId,
+            user: { id: userId }
+         }
+      })
+
+      if (!tweet) {
+         throw new NotFoundException(`Tweet with the id:${tweetId} not found!!`)
+      }
+
+      return tweet
+   }
+
+
+
    //* ------------------ CREATE TWEET ------------------------------
    async createTweet(createTweetDto: CreateTweetDto, userId: number) {
       const user = await this.userService.findUserById(userId)
@@ -33,6 +51,22 @@ export class TweetService {
       }
    }
 
+
+   //* ------------------ UPDATE TWEET ------------------------------
+   async updateTweet(tweetId: number, updateTweetDto: UpdateTweetDto, userId: number) {
+      const tweet = await this.getTweetById(tweetId, userId)
+
+      if (updateTweetDto.postImage !== undefined) {
+         tweet.postImage = updateTweetDto.postImage
+      }
+
+      if (updateTweetDto.text !== undefined) {
+         tweet.text = updateTweetDto.text
+      }
+
+      const tweetToUpdate = this.tweetRepo.create(tweet)
+      return await this.tweetRepo.save(tweetToUpdate)
+   }
 
    //* ------------------ DELETE TWEET ------------------------------
    async deleteTweet(tweetId: number, userId: number) {

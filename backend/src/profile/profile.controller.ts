@@ -2,33 +2,25 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { ProfileService } from './profile.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ActiveUsr } from 'src/auth/decorator/activeUser.decorator';
 
 @Controller('profile')
 export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
+   constructor(private readonly profileService: ProfileService) { }
 
-  @Post()
-  create(@Body() createProfileDto: CreateProfileDto) {
-    return this.profileService.create(createProfileDto);
-  }
 
-  @Get()
-  findAll() {
-    return this.profileService.findAll();
-  }
+   //* ------------------- GET PROFILE ------------------------
+   @Get()
+   async getProfile(@ActiveUsr('sub') userId: number) {
+      const profile = await this.profileService.findOne(userId)
+      return { status: 'success', data: [profile] }
+   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.profileService.findOne(+id);
-  }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProfileDto: UpdateProfileDto) {
-    return this.profileService.update(+id, updateProfileDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.profileService.remove(+id);
-  }
+   //* ------------------- UPDATE PROFILE ------------------------
+   @Patch()
+   async updateProfile(@Body() updateProfileDto: UpdateProfileDto, @ActiveUsr('sub') userId: number) {
+      await this.profileService.updateProfile(updateProfileDto, userId)
+      return { status: 'success', message: 'Profile has been updated successfully!!' }
+   }
 }

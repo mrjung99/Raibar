@@ -1,3 +1,4 @@
+import { IsOptional, IsString } from "class-validator";
 import { User } from "src/user/entities/user.entity";
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
@@ -11,6 +12,12 @@ export class Tweet {
       nullable: false
    })
    text: string
+
+   @Column({
+      type: 'text',
+      nullable: true
+   })
+   postImage?: string
 
    @CreateDateColumn()
    createdAt: Date
