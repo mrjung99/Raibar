@@ -38,11 +38,12 @@ export class AuthService {
       const token = await this.jwtService.signAsync({
          sub: user.id,
          email: user.email
-      }, {
-         secret: this.authConfiguration.secret,
-         audience: this.authConfiguration.audience,
-         issuer: this.authConfiguration.issuer
-      })
+      },
+         {
+            secret: this.authConfiguration.secret,
+            audience: this.authConfiguration.audience,
+            issuer: this.authConfiguration.issuer
+         })
 
       return token
    }

@@ -1,26 +1,46 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { CreateTweetDto } from './dto/create-tweet.dto';
 import { UpdateTweetDto } from './dto/update-tweet.dto';
+import { Repository } from 'typeorm';
+import { Tweet } from './entities/tweet.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class TweetService {
-  create(createTweetDto: CreateTweetDto) {
-    return 'This action adds a new tweet';
-  }
+   constructor(
+      @InjectRepository(Tweet)
+      private readonly tweetRepo: Repository<Tweet>,
+      private readonly userService: UserService
+   ) { }
 
-  findAll() {
-    return `This action returns all tweet`;
-  }
+   //* -----------------------  GET ALL TWEET ------------------
+   async getAllTweet() {
+      return await this.tweetRepo.find()
+   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} tweet`;
-  }
 
-  update(id: number, updateTweetDto: UpdateTweetDto) {
-    return `This action updates a #${id} tweet`;
-  }
+   //* ------------------ CREATE TWEET ------------------------------
+   async createTweet(createTweetDto: CreateTweetDto, userId: number) {
+      const user = await this.userService.findUserById(userId)
 
-  remove(id: number) {
-    return `This action removes a #${id} tweet`;
-  }
+      try {
+         const tweet = this.tweetRepo.create({ ...createTweetDto, user })
+         return await this.tweetRepo.save(tweet)
+
+      } catch (error) {
+         throw new BadRequestException(error)
+      }
+   }
+
+
+   //* ------------------ DELETE TWEET ------------------------------
+   async deleteTweet(tweetId: number, userId: number) {
+      return await this.tweetRepo.findOne({
+         where: {
+            id: tweetId,
+            user: { id: userId }
+         }
+      })
+   }
 }

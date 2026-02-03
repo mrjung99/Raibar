@@ -16,6 +16,7 @@ export class UserService {
    ) { }
 
 
+
    //* ------------------ CREATE USER -------------------------
    async createUser(createUserDto: CreateUserDto) {
       createUserDto.profile = createUserDto.profile ?? {}
@@ -50,12 +51,27 @@ export class UserService {
       }
    }
 
+
+
    //* ------------------ FIND USER BY EMAIL -------------------------
    async findUserByEmail(email: string): Promise<User> {
       const user = await this.userRepository.findOne({ where: { email } })
 
       if (!user) {
          throw new NotFoundException(`User with the email: ${email} is not found.`)
+      }
+
+      return user
+   }
+
+
+
+   //* ------------------ FIND USER BY EMAIL -------------------------
+   async findUserById(userId: number) {
+      const user = await this.userRepository.findOneBy({ id: userId })
+
+      if (!user) {
+         throw new NotFoundException("User not found!!")
       }
 
       return user

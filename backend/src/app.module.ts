@@ -12,6 +12,8 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import authConfig from './auth/config/authConfig';
 import { JwtModule } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthorizedGuard } from './auth/guards/authorized.guard';
 
 const env = process.env.NODE_ENV;
 console.log(env);
@@ -23,7 +25,8 @@ console.log(env);
          load: [dbConfig, appEnvConfig],
          isGlobal: true,
          validationSchema: envValidator
-      }), TypeOrmModule.forRootAsync({
+      }),
+      TypeOrmModule.forRootAsync({
          imports: [ConfigModule],
          inject: [ConfigService],
          useFactory: (appConfig: ConfigService) => ({
@@ -44,7 +47,14 @@ console.log(env);
       ConfigModule.forFeature(authConfig),
       JwtModule.registerAsync(authConfig.asProvider())
    ],
+
    controllers: [AppController],
-   providers: [AppService],
+   providers: [
+      AppService,
+      {
+         provide: APP_GUARD,
+         useClass: AuthorizedGuard
+      }
+   ],
 })
 export class AppModule { }

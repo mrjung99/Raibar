@@ -18,6 +18,6 @@ export class Tweet {
    @DeleteDateColumn()
    deletedAt: Date
 
-   @ManyToOne(() => User, user => user.tweets)
+   @ManyToOne(() => User, user => user.tweets, { onDelete: 'CASCADE', cascade: true })
    user: User
 }
