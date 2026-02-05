@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateTweetDto } from './dto/create-tweet.dto';
 import { UpdateTweetDto } from './dto/update-tweet.dto';
 import { Repository } from 'typeorm';
@@ -8,73 +14,100 @@ import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class TweetService {
-   constructor(
-      @InjectRepository(Tweet)
-      private readonly tweetRepo: Repository<Tweet>,
-      private readonly userService: UserService
-   ) { }
+  constructor(
+    @InjectRepository(Tweet)
+    private readonly tweetRepo: Repository<Tweet>,
+    private readonly userService: UserService,
+  ) {}
 
-   //* -----------------------  GET ALL TWEET ------------------
-   async getAllTweet() {
-      return await this.tweetRepo.find()
-   }
+  //* -----------------------  GET ALL TWEET ------------------
+  async getAllTweet() {
+    const tweets = await this.tweetRepo.find();
+    if (!tweets) {
+      return false;
+    }
+    return tweets;
+  }
 
+  //* -----------------------  GET ALL TWEET OF ACTIVE USER ------------------
+  async findTweetOf(userId: number) {
+    if (!userId) throw new UnauthorizedException('User is not authenticated!!');
+    const tweets = await this.tweetRepo.find({
+      where: {
+        user: { id: userId },
+      },
+    });
 
-   //* -----------------------  GET TWEET BY ID ------------------
-   async getTweetById(tweetId: number, userId: number) {
-      const tweet = await this.tweetRepo.findOne({
-         where: {
-            id: tweetId,
-            user: { id: userId }
-         }
-      })
+    if (!tweets) {
+      return null;
+    }
 
-      if (!tweet) {
-         throw new NotFoundException(`Tweet with the id:${tweetId} not found!!`)
-      }
+    return tweets;
+  }
 
-      return tweet
-   }
+  //* -----------------------  GET SPECIFIC TWEET  ------------------
+  async getSpecificTweet(tweetId: number, userId: number) {
+    const tweet = await this.tweetRepo.findOne({
+      where: {
+        id: tweetId,
+        user: { id: userId },
+      },
+    });
 
+    if (!tweet) {
+      throw new NotFoundException(`Tweet with the id:${tweetId} not found!!`);
+    }
 
+    return tweet;
+  }
 
-   //* ------------------ CREATE TWEET ------------------------------
-   async createTweet(createTweetDto: CreateTweetDto, userId: number) {
-      const user = await this.userService.findUserById(userId)
+  //* ------------------ CREATE TWEET ------------------------------
+  async createTweet(createTweetDto: CreateTweetDto, userId: number) {
+    const user = await this.userService.findUserById(userId);
 
-      try {
-         const tweet = this.tweetRepo.create({ ...createTweetDto, user })
-         return await this.tweetRepo.save(tweet)
+    try {
+      const tweet = this.tweetRepo.create({ ...createTweetDto, user });
+      return await this.tweetRepo.save(tweet);
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
 
-      } catch (error) {
-         throw new BadRequestException(error)
-      }
-   }
+  //* ------------------ UPDATE TWEET ------------------------------
+  async updateTweet(
+    tweetId: number,
+    updateTweetDto: UpdateTweetDto,
+    userId: number,
+  ) {
+    const tweet = await this.getSpecificTweet(tweetId, userId);
 
+    if (updateTweetDto.postImage !== undefined) {
+      tweet.postImage = updateTweetDto.postImage;
+    }
 
-   //* ------------------ UPDATE TWEET ------------------------------
-   async updateTweet(tweetId: number, updateTweetDto: UpdateTweetDto, userId: number) {
-      const tweet = await this.getTweetById(tweetId, userId)
+    if (updateTweetDto.text !== undefined) {
+      tweet.text = updateTweetDto.text;
+    }
 
-      if (updateTweetDto.postImage !== undefined) {
-         tweet.postImage = updateTweetDto.postImage
-      }
+    const tweetToUpdate = this.tweetRepo.create(tweet);
+    return await this.tweetRepo.save(tweetToUpdate);
+  }
 
-      if (updateTweetDto.text !== undefined) {
-         tweet.text = updateTweetDto.text
-      }
+  //* ------------------ DELETE TWEET ------------------------------
+  async deleteTweet(tweetId: number, userId: number) {
+    const tweet = await this.tweetRepo.findOne({
+      where: {
+        id: tweetId,
+        user: { id: userId },
+      },
+    });
 
-      const tweetToUpdate = this.tweetRepo.create(tweet)
-      return await this.tweetRepo.save(tweetToUpdate)
-   }
+    if (!tweet) {
+      throw new NotFoundException('Tweet not found!!');
+    }
 
-   //* ------------------ DELETE TWEET ------------------------------
-   async deleteTweet(tweetId: number, userId: number) {
-      return await this.tweetRepo.findOne({
-         where: {
-            id: tweetId,
-            user: { id: userId }
-         }
-      })
-   }
+    await this.tweetRepo.remove(tweet);
+
+    return true;
+  }
 }

@@ -1,4 +1,9 @@
-import { forwardRef, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserService } from 'src/user/user.service';
@@ -6,45 +11,58 @@ import { HashingProvider } from './provider/hashing.provider';
 import { JwtService } from '@nestjs/jwt';
 import type { ConfigType } from '@nestjs/config';
 import authConfig from './config/authConfig';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
-   constructor(
-      @Inject(forwardRef(() => UserService))
-      private readonly userService: UserService,
-      private readonly hashingProvider: HashingProvider,
-      @Inject(authConfig.KEY)
-      private readonly authConfiguration: ConfigType<typeof authConfig>,
-      private readonly jwtService: JwtService,
-   ) { }
+  constructor(
+    @Inject(forwardRef(() => UserService))
+    private readonly userService: UserService,
+    private readonly hashingProvider: HashingProvider,
+    @Inject(authConfig.KEY)
+    private readonly authConfiguration: ConfigType<typeof authConfig>,
+    private readonly jwtService: JwtService,
+  ) {}
 
-   //* --------------- SIGNUP ---------------------
-   async signUp(createUserDto: CreateUserDto) {
-      return this.userService.createUser(createUserDto)
-   }
+  //* --------------- SIGNUP ---------------------
+  async signUp(createUserDto: CreateUserDto) {
+    return this.userService.createUser(createUserDto);
+  }
 
-   //* ---------------- LOGIN ----------------------
-   async login(loginDto: LoginDto) {
-      const user = await this.userService.findUserByEmail(loginDto.email)
+  //* ---------------- VALIDATE USER ----------------------
+  async validateUser(email: string, password: string) {
+    const user = await this.userService.findUserByEmail(email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials!!');
+    }
 
-      const isPasswordMatched = await this.hashingProvider.comparePassword(
-         loginDto.password,
-         user.password
-      )
-      if (!isPasswordMatched) {
-         throw new UnauthorizedException("Password does not matched!!")
-      }
+    const isPasswordMatched = await this.hashingProvider.comparePassword(
+      password,
+      user.password,
+    );
 
-      const token = await this.jwtService.signAsync({
-         sub: user.id,
-         email: user.email
-      },
-         {
-            secret: this.authConfiguration.secret,
-            audience: this.authConfiguration.audience,
-            issuer: this.authConfiguration.issuer
-         })
+    if (!isPasswordMatched) {
+      throw new UnauthorizedException('Invalid credentials!!');
+    }
 
-      return token
-   }
+    if (user && isPasswordMatched) {
+      const { password: _, ...withoutPass } = user;
+      return withoutPass;
+    }
+
+    return null;
+  }
+
+  //* ---------------- LOGIN ----------------------
+  async login(user: any) {
+    const payload = { sub: user.id, email: user.email };
+    console.log(user);
+
+    const token = await this.jwtService.signAsync(
+      payload,
+      this.authConfiguration,
+    );
+
+    return token;
+  }
 }

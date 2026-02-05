@@ -1,5 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateProfileDto } from './dto/create-profile.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Repository } from 'typeorm';
 import { Profile } from './entities/profile.entity';
@@ -31,33 +30,7 @@ export class ProfileService {
    //* --------------------- UPDATE PROFILE --------------------
    async updateProfile(updateProfileDto: UpdateProfileDto, userId: number) {
       const profile = await this.findOne(userId)
-      if (updateProfileDto.firstName !== undefined) {
-         profile.firstName = updateProfileDto.firstName
-      }
-
-      if (updateProfileDto.lastName !== undefined) {
-         profile.lastName = updateProfileDto.lastName
-      }
-
-      if (updateProfileDto.address !== undefined) {
-         profile.address = updateProfileDto.address
-      }
-
-      if (updateProfileDto.bio !== undefined) {
-         profile.bio = updateProfileDto.bio
-      }
-
-      if (updateProfileDto.dateOfBirth !== undefined) {
-         profile.dateOfBirth = updateProfileDto.dateOfBirth
-      }
-
-      if (updateProfileDto.gender !== undefined) {
-         profile.gender = updateProfileDto.gender
-      }
-
-      if (updateProfileDto.profileImage !== undefined) {
-         profile.profileImage = updateProfileDto.profileImage
-      }
+      Object.assign(profile, updateProfileDto)
 
       const profileToUpdate = this.profileRepo.create(profile)
       return await this.profileRepo.save(profileToUpdate)
