@@ -13,49 +13,46 @@ import { AuthModule } from './auth/auth.module';
 import authConfig from './auth/config/authConfig';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
-import { LocalAuthGuard } from './auth/guards/local.guard';
-import { JwtAthGuard } from './auth/guards/jwt.guard';
+import { JwtAuthGuard } from './auth/guards/jwt.guard';
 
 const env = process.env.NODE_ENV;
 console.log(env);
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      envFilePath: !env ? '.env' : `.env.${env.trim()}.local`,
-      load: [dbConfig, appEnvConfig],
-      isGlobal: true,
-      validationSchema: envValidator,
-    }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (appConfig: ConfigService) => ({
-        type: 'postgres',
-        autoLoadEntities: appConfig.get('database.autoLoadEntities'),
-        synchronize: appConfig.get('database.synchronize'),
-        username: appConfig.get('database.username'),
-        password: appConfig.get('database.password'),
-        database: appConfig.get('database.name'),
-        host: appConfig.get('database.host'),
-        port: appConfig.get('database.port'),
+   imports: [
+      ConfigModule.forRoot({
+         envFilePath: !env ? '.env' : `.env.${env.trim()}.local`,
+         load: [dbConfig, appEnvConfig, authConfig],
+         isGlobal: true,
+         validationSchema: envValidator,
       }),
-    }),
-    TweetModule,
-    UserModule,
-    ProfileModule,
-    AuthModule,
-    ConfigModule.forFeature(authConfig),
-    JwtModule.registerAsync(authConfig.asProvider()),
-  ],
+      TypeOrmModule.forRootAsync({
+         imports: [ConfigModule],
+         inject: [ConfigService],
+         useFactory: (appConfig: ConfigService) => ({
+            type: 'postgres',
+            autoLoadEntities: appConfig.get('database.autoLoadEntities'),
+            synchronize: appConfig.get('database.synchronize'),
+            username: appConfig.get('database.username'),
+            password: appConfig.get('database.password'),
+            database: appConfig.get('database.name'),
+            host: appConfig.get('database.host'),
+            port: appConfig.get('database.port'),
+         }),
+      }),
+      TweetModule,
+      UserModule,
+      ProfileModule,
+      AuthModule,
+   ],
 
-  controllers: [AppController],
-  providers: [
-    AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAthGuard,
-    },
-  ],
+   controllers: [AppController],
+   providers: [
+      AppService,
+      {
+         provide: APP_GUARD,
+         useClass: JwtAuthGuard,
+      },
+   ],
 })
-export class AppModule {}
+export class AppModule { }

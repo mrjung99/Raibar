@@ -1,68 +1,80 @@
 import {
-  forwardRef,
-  Inject,
-  Injectable,
-  UnauthorizedException,
+   forwardRef,
+   Inject,
+   Injectable,
+   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
-import { LoginDto } from './dto/login.dto';
 import { UserService } from 'src/user/user.service';
 import { HashingProvider } from './provider/hashing.provider';
 import { JwtService } from '@nestjs/jwt';
 import type { ConfigType } from '@nestjs/config';
 import authConfig from './config/authConfig';
-import { User } from 'src/user/entities/user.entity';
+import refreshConfig from './config/refreshConfig';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    @Inject(forwardRef(() => UserService))
-    private readonly userService: UserService,
-    private readonly hashingProvider: HashingProvider,
-    @Inject(authConfig.KEY)
-    private readonly authConfiguration: ConfigType<typeof authConfig>,
-    private readonly jwtService: JwtService,
-  ) {}
+   constructor(
+      @Inject(forwardRef(() => UserService))
+      private readonly userService: UserService,
 
-  //* --------------- SIGNUP ---------------------
-  async signUp(createUserDto: CreateUserDto) {
-    return this.userService.createUser(createUserDto);
-  }
+      private readonly hashingProvider: HashingProvider,
 
-  //* ---------------- VALIDATE USER ----------------------
-  async validateUser(email: string, password: string) {
-    const user = await this.userService.findUserByEmail(email);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials!!');
-    }
+      @Inject(authConfig.KEY)
+      private readonly authConfiguration: ConfigType<typeof authConfig>,
 
-    const isPasswordMatched = await this.hashingProvider.comparePassword(
-      password,
-      user.password,
-    );
+      @Inject(refreshConfig.KEY)
+      private readonly refreshConfiguration: ConfigType<typeof refreshConfig>,
 
-    if (!isPasswordMatched) {
-      throw new UnauthorizedException('Invalid credentials!!');
-    }
+      private readonly jwtService: JwtService,
+   ) { }
 
-    if (user && isPasswordMatched) {
-      const { password: _, ...withoutPass } = user;
-      return withoutPass;
-    }
+   //* --------------- SIGNUP ---------------------
+   async signUp(createUserDto: CreateUserDto) {
+      return this.userService.createUser(createUserDto);
+   }
 
-    return null;
-  }
+   //* ---------------- VALIDATE USER ----------------------
+   async validateUser(email: string, password: string) {
+      const user = await this.userService.findUserByEmail(email);
+      if (!user) {
+         throw new UnauthorizedException('Invalid credentials!!');
+      }
 
-  //* ---------------- LOGIN ----------------------
-  async login(user: any) {
-    const payload = { sub: user.id, email: user.email };
-    console.log(user);
+      const isPasswordMatched = await this.hashingProvider.comparePassword(
+         password,
+         user.password,
+      );
 
-    const token = await this.jwtService.signAsync(
-      payload,
-      this.authConfiguration,
-    );
+      if (!isPasswordMatched) {
+         throw new UnauthorizedException('Invalid credentials!!');
+      }
 
-    return token;
-  }
+      if (user && isPasswordMatched) {
+         const { password: _, ...withoutPass } = user;
+         return withoutPass;
+      }
+
+      return null;
+   }
+
+   //* ---------------- LOGIN ----------------------
+   async login(user: any) {
+      const payload = { sub: user.id, email: user.email };
+
+      const accessToken = await this.jwtService.signAsync(
+         payload,
+         this.authConfiguration,
+      );
+
+      const refreshToken = await this.jwtService.signAsync(payload, this.refreshConfiguration)
+
+      return { status: 'success', token: { accessToken, refreshToken } };
+   }
+
+   //*---------------- REFRESH TOKEN -----------------
+   async getRefreshToken(id: number) {
+      const payload = { sub: id }
+      return await this.jwtService.signAsync(payload, this.authConfiguration)
+   }
 }
